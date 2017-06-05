@@ -1,7 +1,6 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include "car/car_lib.h"
-#include "gtsam/3rdparty/Eigen/Eigen/Dense"
 #include "car/OdomVelocities.h"
 
 using namespace car;
@@ -37,6 +36,9 @@ int main(int argc, char **argv)
 
     ros::Subscriber sub = nh.subscribe("odom_commands",1000, &odomCallback);
 
+    loadMap();
+
+    std::cout << lmMap.at(0).x << " " << lmMap.at(11).y << "\n";
     ros::spin();
     return 0;
 }

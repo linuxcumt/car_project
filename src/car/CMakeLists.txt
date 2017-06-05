@@ -158,7 +158,7 @@ include_directories(
 ## Declare a C++ library
 add_library(car_lib
   include/${PROJECT_NAME}/car_lib.h
-  src/car_node.cpp
+  src/car_lib.cpp
 )
 
 ## Declare a C++ library
