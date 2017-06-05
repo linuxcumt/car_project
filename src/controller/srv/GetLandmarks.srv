@@ -1,0 +1,7 @@
+geometry_msgs/Point point
+std_msgs/Float64 width_meter
+std_msgs/Float64 heigth_meter
+---
+Landmark[] landmarks
+
+

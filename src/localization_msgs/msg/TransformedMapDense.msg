@@ -1,6 +1,0 @@
-std_msgs/Header header
-localization_msgs/MapDense map
-localization_msgs/Pose2DWithCovarianceStamped transform
-bool valid
-float64 corr_rotation
-float64 corr_translation

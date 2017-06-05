@@ -8,9 +8,8 @@ project(controller)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  cv_bridge
   geometry_msgs
-  message_filters
+  message_generation
   nav_msgs
   roscpp
   sensor_msgs
@@ -57,6 +56,20 @@ find_package(catkin REQUIRED COMPONENTS
 #   Message2.msg
 # )
 
+add_message_files(
+  FILES
+  MapDense.msg
+  Landmark.msg
+  Landmarks.msg
+  Pose2DWithCovarianceStamped.msg
+  Grid.msg
+  OdomVelocities.msg
+)
+
+add_service_files(
+  FILES
+  GetLandmarks.srv
+)
 ## Generate services in the 'srv' folder
 # add_service_files(
 #   FILES
@@ -72,11 +85,13 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
- generate_messages(
-   DEPENDENCIES
-   std_msgs  # Or other packages containing msgs
-   localization_msgs
- )
+generate_messages(
+  DEPENDENCIES
+  geometry_msgs
+  nav_msgs
+  sensor_msgs
+  std_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -111,9 +126,8 @@ catkin_package(
   INCLUDE_DIRS include
   LIBRARIES controller_lib
   CATKIN_DEPENDS
-  cv_bridge
   geometry_msgs
-  message_filters
+  message_runtime
   nav_msgs
   roscpp
   sensor_msgs
@@ -220,3 +234,4 @@ target_link_libraries(controller_node ${catkin_LIBRARIES})
 target_link_libraries(controller_lib
   ${catkin_LIBRARIES}
 )
+

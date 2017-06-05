@@ -2,16 +2,15 @@ cmake_minimum_required(VERSION 2.8.3)
 project(car)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 
 find_package(catkin REQUIRED COMPONENTS
-  cv_bridge
   geometry_msgs
-  message_filters
+  message_generation
   nav_msgs
   roscpp
   sensor_msgs
@@ -51,6 +50,21 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * uncomment the generate_messages entry below
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
+add_message_files(
+  FILES
+  MapDense.msg
+  Landmark.msg
+  Landmarks.msg
+  Pose2DWithCovarianceStamped.msg
+  Grid.msg
+  OdomVelocities.msg
+)
+
+add_service_files(
+  FILES
+  GetLandmarks.srv
+)
+
 ## Generate messages in the 'msg' folder
 # add_message_files(
 #   FILES
@@ -79,11 +93,13 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
- generate_messages(
-   DEPENDENCIES
-   std_msgs  # Or other packages containing msgs
-   localization_msgs
- )
+generate_messages(
+  DEPENDENCIES
+  geometry_msgs
+  nav_msgs
+  sensor_msgs
+  std_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -114,13 +130,13 @@ find_package(catkin REQUIRED COMPONENTS
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
+
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES car_lib
   CATKIN_DEPENDS
-  cv_bridge
   geometry_msgs
-  message_filters
+  message_runtime
   nav_msgs
   roscpp
   sensor_msgs
