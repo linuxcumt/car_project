@@ -2,13 +2,19 @@ cmake_minimum_required(VERSION 2.8.3)
 project(controller)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+#add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  std_msgs roscpp rospy
+  cv_bridge
+  geometry_msgs
+  message_filters
+  nav_msgs
+  roscpp
+  sensor_msgs
+  std_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -66,10 +72,11 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
-# )
+ generate_messages(
+   DEPENDENCIES
+   std_msgs  # Or other packages containing msgs
+   localization_msgs
+ )
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -101,9 +108,16 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES controller
-#  CATKIN_DEPENDS std_msgs roscpp rospy
+  INCLUDE_DIRS include
+  LIBRARIES controller_lib
+  CATKIN_DEPENDS
+  cv_bridge
+  geometry_msgs
+  message_filters
+  nav_msgs
+  roscpp
+  sensor_msgs
+  std_msgs
 #  DEPENDS system_lib
 )
 
@@ -114,10 +128,15 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  include
   ${catkin_INCLUDE_DIRS}
 )
 
+## Declare a C++ library
+add_library(controller_lib
+  include/${PROJECT_NAME}/controller_lib.h
+  src/controller_node.cpp
+)
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/controller.cpp
@@ -195,3 +214,9 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+add_executable(controller_node src/controller_node)
+target_link_libraries(controller_node ${catkin_LIBRARIES})
+target_link_libraries(controller_lib
+  ${catkin_LIBRARIES}
+)

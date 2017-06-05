@@ -1,0 +1,7 @@
+geometry_msgs/Point point
+std_msgs/Int16 width
+std_msgs/Int16 heigth
+---
+localization_msgs/MapDense map
+
+
