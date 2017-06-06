@@ -44,7 +44,7 @@ namespace car
 
   // loop functions
   void drive(const Odom &odom_com, Pose2D &curPos, Pose2D &realPos);
-  void sense(const Pose2D& realPos, std::vector<Pose2D>& landmarks) {}
+  void sense(const Pose2D& pos, const std::vector<Pose2D> &lmMap, std::vector<Pose2D>& landmarks);
   void localize(const Pose2D& realPos, const Pose2D& currentPos,
                 const std::vector<Pose2D>& landmarks)
   {
@@ -88,7 +88,7 @@ namespace car
   {
     // compute increments
     double d_t;
-    if(initialized)
+    if(initialized && (odom_com.stamp - t_last) <= 1)
       d_t = odom_com.stamp - t_last;
     else
       d_t = 0.1;
@@ -114,6 +114,26 @@ namespace car
     incrementOdometry(odom_com, curPos);
     std::cout << "curPos.x = " << curPos.x << ", curPos.y = " << curPos.x
               << ", curPos.psi = " << curPos.psi << "\n";
+  }
+
+  void sense(const Pose2D& pos, const std::vector<Pose2D>& lmMap, std::vector<Pose2D>& landmarks)
+  {
+    double d_thresh = 10;
+    double d;
+    // TODO: provide accuracy model which decays the further away the landmarks are
+    // landmarks that are within the sensor range around the provided pos are written into the vector
+    for (int i = 0; i<lmMap.size(); i++)
+    {
+      d = std::sqrt(std::pow(lmMap.at(i).x-pos.x,2)+std::pow(lmMap.at(i).y-pos.y,2));
+      if (d<d_thresh)
+        landmarks.push_back(lmMap.at(i));
+    }
+
+    // test function
+    for (int i = 0; i<landmarks.size(); i++)
+    {
+      std::cout << "found lm at x = " << landmarks.at(i).x << ", and y = " << landmarks.at(i).y << "\n";
+    }
   }
 }
 

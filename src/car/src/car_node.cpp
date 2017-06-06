@@ -20,7 +20,7 @@ void odomCallback(const car::OdomVelocities &odom_msg)
     drive(com,curPos,realPos);
     // sense landmarks in environment
     std::vector<Pose2D> landmarks;
-    sense(realPos,landmarks);
+    sense(realPos,lmMap,landmarks);
     // localize based on information found from landmarks
     localize(realPos,curPos,landmarks);
 
