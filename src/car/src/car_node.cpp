@@ -17,7 +17,7 @@ void odomCallback(const car::OdomVelocities &odom_msg)
     com.v_psi = odom_msg.v_psi;
 
     // simulate vehicle driving
-    drive(com);
+    drive(com,curPos,realPos);
     // sense landmarks in environment
     std::vector<Pose2D> landmarks;
     sense(realPos,landmarks);
@@ -25,6 +25,10 @@ void odomCallback(const car::OdomVelocities &odom_msg)
     localize(realPos,curPos,landmarks);
 
     // visualize
+
+    // initialized
+    initialized = true;
+    t_last = odom_msg.header.stamp.toSec();
 }
 
 int main(int argc, char **argv)
@@ -38,7 +42,7 @@ int main(int argc, char **argv)
 
     loadMap();
 
-    std::cout << lmMap.at(0).x << " " << lmMap.at(11).y << "\n";
+    //std::cout << lmMap.at(0).x << " " << lmMap.at(11).y << "\n";
     ros::spin();
     return 0;
 }

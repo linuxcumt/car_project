@@ -57,7 +57,7 @@ int main(int argc, char **argv)
   int count = 0;
 
   controller::OdomVelocities coms;
-  coms.v_x = 1;
+  coms.v_x = 10;
   coms.v_y = coms.v_z = 0;
 
 
@@ -68,7 +68,7 @@ int main(int argc, char **argv)
       coms.v_psi = 0;
     }
     else {
-      coms.v_psi = M_PI/100;
+      coms.v_psi = M_PI/10;
     }
     /**
      * This is a message object. You stuff it with data, and then publish it.
