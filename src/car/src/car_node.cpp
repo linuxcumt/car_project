@@ -18,14 +18,19 @@ void odomCallback(const car::OdomVelocities &odom_msg)
 
     // simulate vehicle driving
     drive(com,curPos,realPos);
-    // sense landmarks in environment
+    // sense landmarks in environment, simulated from the real car position
     std::vector<Pose2D> landmarks;
     sense(realPos,lmMap,landmarks);
     // localize based on information found from landmarks
     localize(realPos,curPos,landmarks);
-
+    // save poses
+    if(listRealPos.size()<1000)
+    {
+      listRealPos.push_back(realPos);
+      listCurPos.push_back(curPos);
+    }
     // visualize
-
+    visualize(listRealPos,listCurPos);
     // initialized
     initialized = true;
     t_last = odom_msg.header.stamp.toSec();
@@ -39,6 +44,7 @@ int main(int argc, char **argv)
     ros::NodeHandle nh;
 
     ros::Subscriber sub = nh.subscribe("odom_commands",1000, &odomCallback);
+    marker_pub = nh.advertise<visualization_msgs::Marker>("visualization_marker", 10);
 
     loadMap();
 

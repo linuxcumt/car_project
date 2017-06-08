@@ -68,7 +68,7 @@ int main(int argc, char **argv)
       coms.v_psi = 0;
     }
     else {
-      coms.v_psi = M_PI/10;
+      coms.v_psi = M_PI/5;
     }
     /**
      * This is a message object. You stuff it with data, and then publish it.

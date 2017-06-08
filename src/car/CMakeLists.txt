@@ -17,6 +17,37 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
 )
 
+###### GTSAM STUFF STARTED
+
+# This file should be used as a template for creating new projects using the CMake tools
+# This project has the following features
+#    - GTSAM linking
+#    - Unit tests via CppUnitLite
+#    - Scripts
+#    - Automatic MATLAB wrapper generation
+
+# Include GTSAM CMake tools
+find_package(GTSAMCMakeTools)
+include(GtsamBuildTypes) # Load build type flags and default to Debug mode
+#include(GtsamTesting)    # Easy functions for creating unit tests and scripts
+#include(GtsamMatlabWrap) # Automatic MATLAB wrapper generation
+
+# Ensure that local folder is searched before library folders
+#include_directories(BEFORE "${PROJECT_SOURCE_DIR}")
+
+###################################################################################
+# Find GTSAM components
+find_package(GTSAM REQUIRED) # Uses installed package
+include_directories(${GTSAM_INCLUDE_DIR})
+
+###################################################################################
+# Build static library from common sources
+#set(CONVENIENCE_LIB_NAME ${PROJECT_NAME})
+#add_library(${CONVENIENCE_LIB_NAME} STATIC include/car/car_lib.h src/car_lib.cpp)
+#target_link_libraries(${CONVENIENCE_LIB_NAME} gtsam)
+
+###### GTSAM STUFF OVER
+
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -159,6 +190,7 @@ include_directories(
 add_library(car_lib
   include/${PROJECT_NAME}/car_lib.h
   src/car_lib.cpp
+#  /usr/lib/gtsam/gtsam.h
 )
 
 ## Declare a C++ library
@@ -244,3 +276,5 @@ target_link_libraries(car_node ${catkin_LIBRARIES})
 target_link_libraries(car_lib
   ${catkin_LIBRARIES}
 )
+#target_link_libraries(car_lib ${GTSAM_INCLUDE_DIR})
+target_link_libraries(car_lib gtsam)
