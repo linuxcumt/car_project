@@ -23,14 +23,14 @@ void odomCallback(const car::OdomVelocities &odom_msg)
     sense(realPos,lmMap,landmarks);
     // localize based on information found from landmarks
     localize(realPos,curPos,landmarks);
-    // save poses
-    if(listRealPos.size()<1000)
-    {
-      listRealPos.push_back(realPos);
-      listCurPos.push_back(curPos);
-    }
+//    // save poses
+//    if(listRealPos.size()<1000)
+//    {
+//      listRealPos.push_back(realPos);
+//      listCurPos.push_back(curPos);
+//    }
     // visualize
-    visualize(listRealPos,listCurPos);
+    visualize(realPos,curPos,landmarks);
     // initialized
     initialized = true;
     t_last = odom_msg.header.stamp.toSec();
@@ -46,7 +46,9 @@ int main(int argc, char **argv)
     ros::Subscriber sub = nh.subscribe("odom_commands",1000, &odomCallback);
     marker_pub = nh.advertise<visualization_msgs::Marker>("visualization_marker", 10);
 
+    // order is important! first map, then markers!
     loadMap();
+    setupMarker();
 
     //std::cout << lmMap.at(0).x << " " << lmMap.at(11).y << "\n";
     ros::spin();

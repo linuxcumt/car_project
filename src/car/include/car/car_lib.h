@@ -47,6 +47,8 @@ namespace car
 
   // visualization
   ros::Publisher marker_pub;
+  visualization_msgs::Marker points, line_strip, car, loc_lms, glob_lms;
+  void setupMarker();
 
   // variables
   bool initialized = false;
@@ -62,7 +64,7 @@ namespace car
   void sense(const Pose2D& pos, const std::vector<Pose2D> &lmMap, std::vector<Pose2D>& landmarks);
   void localize(Pose2D &realPos, Pose2D &curPos,
                 const std::vector<Pose2D>& landmarks);
-  void visualize(const std::vector<Pose2D> listRealPos, const std::vector<Pose2D> listCurPos);
+  void visualize(const Pose2D &realPos, const Pose2D &curPos, const std::vector<Pose2D> &landmarks);
 
   // implementation
 
@@ -155,24 +157,29 @@ namespace car
   {
   }
 
-  void visualize(const std::vector<Pose2D> listRealPos, const std::vector<Pose2D> listCurPos)
+  void setupMarker()
   {
-    visualization_msgs::Marker points, line_strip, car;
-    points.header.frame_id = line_strip.header.frame_id = car.header.frame_id = "/my_frame";
-    // TIME NOT SAME AS POSE
-    points.header.stamp = line_strip.header.stamp = car.header.stamp = ros::Time::now();
+    points.header.frame_id = line_strip.header.frame_id = car.header.frame_id
+        = loc_lms.header.frame_id = glob_lms.header.frame_id = "/my_frame";
     points.ns = line_strip.ns = "poses";
     car.ns = "car";
-    points.action = line_strip.action = visualization_msgs::Marker::ADD;
+    loc_lms.ns = "local_landmarks";
+    glob_lms.ns = "global_landmarks";
+    points.action = line_strip.action = car.action = loc_lms.action
+        = glob_lms.action = visualization_msgs::Marker::ADD;
     points.pose.orientation.w = line_strip.pose.orientation.w = 1.0;
 
     points.id = 0;
     line_strip.id = 1;
     car.id = 2;
+    loc_lms.id = 3;
+    glob_lms.id = 4;
 
     points.type = visualization_msgs::Marker::POINTS;
     line_strip.type = visualization_msgs::Marker::LINE_STRIP;
     car.type = visualization_msgs::Marker::CUBE;
+    loc_lms.type = visualization_msgs::Marker::SPHERE_LIST;
+    glob_lms.type = visualization_msgs::Marker::SPHERE_LIST;
 
     // POINTS markers use x and y scale for width/height respectively
     points.scale.x = 0.2;
@@ -181,8 +188,8 @@ namespace car
     // LINE_STRIP/LINE_LIST markers use only the x component of scale, for the line width
     line_strip.scale.x = 0.1;
 
-    // Points are green
-    points.color.g = 1.0f;
+    // Points are blue
+    points.color.b = 1.0;
     points.color.a = 1.0;
 
     // Line strip is blue
@@ -193,38 +200,78 @@ namespace car
     car.color.r = 1.0;
     car.color.a = 1.0;
 
-    // Create the vertices for the points and lines
-    for (uint32_t i = 0; i < listRealPos.size(); i++)
-    {
-      float x = (float) listRealPos.at(i).x;
-      float y = (float) listRealPos.at(i).y;
-      float z = 0;
-
-      geometry_msgs::Point p;
-      p.x = x;
-      p.y = y;
-      p.z = z;
-
-      points.points.push_back(p);
-      line_strip.points.push_back(p);
-    }
-    // car stuff
-    // Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
-    car.pose.position.x = listRealPos.back().x;
-    car.pose.position.y = listRealPos.back().y;
-    car.pose.position.z = 0;
-    car.pose.orientation.x = car.pose.orientation.y = car.pose.orientation.z = 0.0;
-    car.pose.orientation.w = 1.0;
-
     // Set the scale of the marker -- 1x1x1 here means 1m on a side
-    car.scale.x = 0.5;
-    car.scale.y = 0.3;
-    car.scale.z = 0.5;
+    car.scale.x = 0.8;
+    car.scale.y = 0.4;
+    car.scale.z = 0.4;
 
+    //local landmarks
+    loc_lms.scale.x = 1;
+    loc_lms.scale.y = 1;
+    loc_lms.scale.z = 0;
+    loc_lms.color.a = 1.0; // Don't forget to set the alpha!
+    loc_lms.color.r = 1.0;
+
+    //global landmarks
+    glob_lms.scale.x = 0.6;
+    glob_lms.scale.y = 0.6;
+    glob_lms.scale.z = 0;
+    glob_lms.color.a = 1.0; // Don't forget to set the alpha!
+    glob_lms.color.g = 1.0;
+    geometry_msgs::Point p;
+    p.z = 0;
+    for (uint i = 0; i<lmMap.size(); i++)
+    {
+      p.x = lmMap.at(i).x;
+      p.y = lmMap.at(i).y;
+      glob_lms.points.push_back(p);
+    }
+  }
+
+  void visualize(const Pose2D &realPos, const Pose2D &curPos, const std::vector<Pose2D> &landmarks)
+  {
+    // TIME NOT SAME AS POSE
+    points.header.stamp = line_strip.header.stamp = car.header.stamp
+        = loc_lms.header.stamp = glob_lms.header.stamp = ros::Time::now();
+    // Create the vertices for the points and lines
+    float x = (float) realPos.x;
+    float y = (float) realPos.y;
+    float z = 0;
+    geometry_msgs::Point p;
+    p.x = x;
+    p.y = y;
+    p.z = z;
+    points.points.push_back(p);
+    line_strip.points.push_back(p);
+    if (points.points.size() > 100)
+    {
+      points.points.erase(points.points.begin(),points.points.begin()+1);
+      line_strip.points.erase(line_strip.points.begin(),line_strip.points.begin()+1);
+    }
+    // Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+    car.pose.position.x = realPos.x;
+    car.pose.position.y = realPos.y;
+    car.pose.position.z = 0;
+    car.pose.orientation.x = car.pose.orientation.y = 0.0;
+    car.pose.orientation.z = realPos.psi;
+    car.pose.orientation.w = 1.0; // 1.0 default
+
+    // load local landmarks
+    geometry_msgs::Point pl;
+    pl.z = 0;
+    loc_lms.points.clear();
+    for (uint i = 0; i<landmarks.size(); i++)
+    {
+      pl.x = landmarks.at(i).x;
+      pl.y = landmarks.at(i).y;
+      loc_lms.points.push_back(pl);
+    }
     // publish
     marker_pub.publish(points);
     marker_pub.publish(line_strip);
     marker_pub.publish(car);
+    marker_pub.publish(glob_lms);
+    marker_pub.publish(loc_lms);
   }
 }
 
