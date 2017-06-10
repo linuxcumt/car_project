@@ -59,7 +59,7 @@ int main(int argc, char **argv)
   controller::OdomVelocities coms;
   coms.v_x = 10;
   coms.v_y = 0;
-  coms.noise_x = coms.noise_y = 0.5;
+  coms.noise_x = coms.noise_y = 0.8;
   coms.noise_psi = M_PI/50;
 
 

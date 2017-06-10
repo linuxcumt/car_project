@@ -17,18 +17,12 @@ void odomCallback(const car::OdomVelocities &odom_msg)
     com.noise_x = odom_msg.noise_x; com.noise_y= odom_msg.noise_y; com.noise_psi = odom_msg.noise_psi;
 
     // simulate vehicle driving
-    drive(com,curPos,realPos);
+    drive(com,curPos,realPos,odomPos);
     // sense landmarks in environment, simulated from the real car position
     std::vector<Pose2D> landmarks;
     sense(realPos,lmMap,landmarks);
     // localize based on information found from landmarks
     localize(realPos,curPos,landmarks);
-//    // save poses
-//    if(listRealPos.size()<1000)
-//    {
-//      listRealPos.push_back(realPos);
-//      listCurPos.push_back(curPos);
-//    }
     // visualize
     visualize(realPos,curPos,landmarks);
     // initialized
@@ -44,7 +38,10 @@ int main(int argc, char **argv)
     ros::NodeHandle nh;
 
     ros::Subscriber sub = nh.subscribe("odom_commands",1000, &odomCallback);
-    marker_pub = nh.advertise<visualization_msgs::Marker>("visualization_marker", 10);
+    marker_pub = nh.advertise<visualization_msgs::Marker>("car_markers", 10);
+    rpath_pub = nh.advertise<nav_msgs::Path>("car_realpath", 10);
+    cpath_pub = nh.advertise<nav_msgs::Path>("car_curpath", 10);
+    opath_pub = nh.advertise<nav_msgs::Path>("car_odompath", 10);
 
     // order is important! first map, then markers!
     loadMap();

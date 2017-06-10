@@ -8,6 +8,7 @@
 #include <sstream>
 #include <vector>
 #include <visualization_msgs/Marker.h>
+#include <nav_msgs/Path.h>
 
 // GTSAM headers
 #include <gtsam/geometry/Pose2.h>
@@ -43,14 +44,15 @@ namespace car
 
   // container
   Pose2D realPos;
-  std::vector<Pose2D> listRealPos;
   Pose2D curPos;
-  std::vector<Pose2D> listCurPos;
+  Pose2D odomPos;
   std::vector<Pose2D> lmMap;
 
   // visualization
   ros::Publisher marker_pub;
+  ros::Publisher rpath_pub, cpath_pub, opath_pub;
   visualization_msgs::Marker points, line_strip, car, loc_lms, glob_lms;
+  nav_msgs::Path realPath, curPath, odomPath;
   void setupMarker();
 
   // flags
@@ -65,7 +67,7 @@ namespace car
   double sensorModel(const double &d);
 
   // loop functions
-  void drive(const Odom &odom_com, Pose2D &curPos, Pose2D &realPos);
+  void drive(const Odom &odom_com, Pose2D &curPos, Pose2D &realPos, Pose2D &odomPos);
   void sense(const Pose2D& pos, const std::vector<Pose2D> &lmMap, std::vector<Pose2D>& landmarks);
   void localize(Pose2D &realPos, Pose2D &curPos,
                 const std::vector<Pose2D>& landmarks);
@@ -143,15 +145,18 @@ namespace car
     return std::exp(-std::pow(d/std_dev,2));
   }
 
-  void drive(const Odom &odom_com, Pose2D &curPos, Pose2D &realPos)
+  void drive(const Odom &odom_com, Pose2D &curPos, Pose2D &realPos, Pose2D &odomPos)
   {
     // TODO: add noise model before incrementing curPos
     incrementOdometry(odom_com, realPos, false);
     incrementOdometry(odom_com, curPos, true);
+    odomPos = curPos;
     std::cout << "realPos.x = " << realPos.x << ", realPos.y = " << realPos.y
               << ", realPos.psi = " << realPos.psi << "\n";
     std::cout << "curPos.x = " << curPos.x << ", curPos.y = " << curPos.y
               << ", curPos.psi = " << curPos.psi << "\n";
+    std::cout << "odomPos.x = " << odomPos.x << ", odomPos.y = " << odomPos.y
+              << ", odomPos.psi = " << odomPos.psi << "\n";
   }
 
   void sense(const Pose2D& pos, const std::vector<Pose2D>& lmMap, std::vector<Pose2D>& landmarks)
@@ -170,17 +175,17 @@ namespace car
       {
         double prob = sensorModel(d); // probability to see current landmark
         double draw = drawer(gen);
-        std::cout << "d = " << d << ", prob = " << prob << ", draw = " << draw << "\n";
+        //std::cout << "d = " << d << ", prob = " << prob << ", draw = " << draw << "\n";
         if (draw < prob)
           landmarks.push_back(lmMap.at(i));
       }
     }
 
-    // test function
-    for (uint i = 0; i<landmarks.size(); i++)
-    {
-      std::cout << "found lm at x = " << landmarks.at(i).x << ", and y = " << landmarks.at(i).y << "\n";
-    }
+//    // test function
+//    for (uint i = 0; i<landmarks.size(); i++)
+//    {
+//      std::cout << "found lm at x = " << landmarks.at(i).x << ", and y = " << landmarks.at(i).y << "\n";
+//    }
   }
 
   void localize(Pose2D& realPos, Pose2D& curPos,
@@ -191,11 +196,14 @@ namespace car
   void setupMarker()
   {
     points.header.frame_id = line_strip.header.frame_id = car.header.frame_id
-        = loc_lms.header.frame_id = glob_lms.header.frame_id = "/my_frame";
+        = loc_lms.header.frame_id = glob_lms.header.frame_id = realPath.header.frame_id
+        = curPath.header.frame_id = odomPath.header.frame_id = "/my_frame";
     points.ns = line_strip.ns = "poses";
     car.ns = "car";
     loc_lms.ns = "local_landmarks";
     glob_lms.ns = "global_landmarks";
+
+    //realPath.Type = "car_paths";
     points.action = line_strip.action = car.action = loc_lms.action
         = glob_lms.action = visualization_msgs::Marker::ADD;
     points.pose.orientation.w = line_strip.pose.orientation.w = 1.0;
@@ -265,19 +273,27 @@ namespace car
     points.header.stamp = line_strip.header.stamp = car.header.stamp
         = loc_lms.header.stamp = glob_lms.header.stamp = ros::Time::now();
     // Create the vertices for the points and lines
-    float x = (float) realPos.x;
-    float y = (float) realPos.y;
-    float z = 0;
     geometry_msgs::Point p;
-    p.x = x;
-    p.y = y;
-    p.z = z;
+    p.x = realPos.x; p.y = realPos.y; p.z = 0.0;
     points.points.push_back(p);
     line_strip.points.push_back(p);
-    if (points.points.size() > 100)
+    geometry_msgs::PoseStamped r_pos, c_pos, o_pos;
+    r_pos.pose.position.x = realPos.x; r_pos.pose.position.y = realPos.y; r_pos.pose.position.z = 0;
+    r_pos.pose.orientation.w = realPos.psi;
+    c_pos.pose.position.x = curPos.x; c_pos.pose.position.y = curPos.y; c_pos.pose.position.z = 0;
+    c_pos.pose.orientation.w = curPos.psi;
+    o_pos.pose.position.x = odomPos.x; o_pos.pose.position.y = odomPos.y; o_pos.pose.position.z = 0;
+    o_pos.pose.orientation.w = odomPos.psi;
+    realPath.poses.push_back(r_pos);
+    curPath.poses.push_back(c_pos);
+    odomPath.poses.push_back(o_pos);
+    if (points.points.size() > 80)
     {
       points.points.erase(points.points.begin(),points.points.begin()+1);
       line_strip.points.erase(line_strip.points.begin(),line_strip.points.begin()+1);
+      realPath.poses.erase(realPath.poses.begin(),realPath.poses.begin()+1);
+      curPath.poses.erase(curPath.poses.begin(),curPath.poses.begin()+1);
+      odomPath.poses.erase(odomPath.poses.begin(),odomPath.poses.begin()+1);
     }
     // Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
     car.pose.position.x = realPos.x;
@@ -298,11 +314,14 @@ namespace car
       loc_lms.points.push_back(pl);
     }
     // publish
-    marker_pub.publish(points);
-    marker_pub.publish(line_strip);
+//    marker_pub.publish(points);
+//    marker_pub.publish(line_strip);
     marker_pub.publish(car);
     marker_pub.publish(glob_lms);
     marker_pub.publish(loc_lms);
+    rpath_pub.publish(realPath);
+    cpath_pub.publish(curPath);
+    opath_pub.publish(odomPath);
   }
 }
 
