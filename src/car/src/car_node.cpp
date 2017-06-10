@@ -8,13 +8,13 @@ using namespace car;
 void odomCallback(const car::OdomVelocities &odom_msg)
 {
     ROS_INFO("entering odomCallback callback");
+    srand((int)time(NULL));
 
     // save odom msg
     Odom com;
     com.stamp = odom_msg.header.stamp.toSec();
-    com.v_x = odom_msg.v_x;
-    com.v_y = odom_msg.v_y;
-    com.v_psi = odom_msg.v_psi;
+    com.v_x = odom_msg.v_x; com.v_y = odom_msg.v_y; com.v_psi = odom_msg.v_psi;
+    com.noise_x = odom_msg.noise_x; com.noise_y= odom_msg.noise_y; com.noise_psi = odom_msg.noise_psi;
 
     // simulate vehicle driving
     drive(com,curPos,realPos);

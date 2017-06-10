@@ -36,6 +36,9 @@ namespace car
     double v_y = 0.0;
     double v_psi = 0.0;
     double stamp = 0.0;
+    double noise_x = 0.0;
+    double noise_y = 0.0;
+    double noise_psi = 0.0;
   };
 
   // container
@@ -50,14 +53,16 @@ namespace car
   visualization_msgs::Marker points, line_strip, car, loc_lms, glob_lms;
   void setupMarker();
 
-  // variables
+  // flags
   bool initialized = false;
   double t_last = 0.0;
+  // variables
 
   // utility functions
   void loadMap();
   void normalizeAngles(double& psi);
-  void incrementOdometry(const Odom &odom_com, Pose2D &curPos);
+  void incrementOdometry(Odom odom_com, Pose2D &curPos, const bool &withNoise);
+  double sensorModel(const double &d);
 
   // loop functions
   void drive(const Odom &odom_com, Pose2D &curPos, Pose2D &realPos);
@@ -100,8 +105,17 @@ namespace car
       psi -= 2 * M_PI;
   }
 
-  void incrementOdometry(const Odom &odom_com, Pose2D &Pos)
+  void incrementOdometry(Odom odom_com, Pose2D &Pos, const bool &withNoise)
   {
+    if (withNoise == true)
+    {
+      std::random_device rd;
+      std::mt19937 gen(rd());
+      std::normal_distribution<double> dx(0,odom_com.noise_x);
+      std::normal_distribution<double> dy(0,odom_com.noise_y);
+      std::normal_distribution<double> dpsi(0,odom_com.noise_psi); // maybe generate psi uniformly between 0 and 2pi
+      odom_com.v_x += dx(gen); odom_com.v_y += dy(gen); odom_com.v_psi += dpsi(gen);
+    }
     // compute increments
     double d_t;
     if(initialized && (odom_com.stamp - t_last) <= 1)
@@ -123,26 +137,43 @@ namespace car
     normalizeAngles(Pos.psi);
   }
 
+  double sensorModel(const double &d)
+  {
+    double std_dev = 10;
+    return std::exp(-std::pow(d/std_dev,2));
+  }
+
   void drive(const Odom &odom_com, Pose2D &curPos, Pose2D &realPos)
   {
     // TODO: add noise model before incrementing curPos
-    incrementOdometry(odom_com, realPos);
-    incrementOdometry(odom_com, curPos);
+    incrementOdometry(odom_com, realPos, false);
+    incrementOdometry(odom_com, curPos, true);
+    std::cout << "realPos.x = " << realPos.x << ", realPos.y = " << realPos.y
+              << ", realPos.psi = " << realPos.psi << "\n";
     std::cout << "curPos.x = " << curPos.x << ", curPos.y = " << curPos.y
               << ", curPos.psi = " << curPos.psi << "\n";
   }
 
   void sense(const Pose2D& pos, const std::vector<Pose2D>& lmMap, std::vector<Pose2D>& landmarks)
   {
-    double d_thresh = 10;
+    double d_thresh = 25;
     double d;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> drawer(0.0,1.0);
     // TODO: provide accuracy model which decays the further away the landmarks are
     // landmarks that are within the sensor range around the provided pos are written into the vector
     for (uint i = 0; i<lmMap.size(); i++)
     {
       d = std::sqrt(std::pow(lmMap.at(i).x-pos.x,2)+std::pow(lmMap.at(i).y-pos.y,2));
       if (d<d_thresh)
-        landmarks.push_back(lmMap.at(i));
+      {
+        double prob = sensorModel(d); // probability to see current landmark
+        double draw = drawer(gen);
+        std::cout << "d = " << d << ", prob = " << prob << ", draw = " << draw << "\n";
+        if (draw < prob)
+          landmarks.push_back(lmMap.at(i));
+      }
     }
 
     // test function
