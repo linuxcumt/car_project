@@ -11,18 +11,88 @@
 #include <nav_msgs/Path.h>
 
 // GTSAM headers
+// We will use Pose2 variables (x, y, theta) to represent the robot positions
 #include <gtsam/geometry/Pose2.h>
-//#include <gtsam/nonlinear/NonlinearFactorGraph.h>
-//#include <gtsam/nonlinear/Values.h>
-//#include <gtsam/inference/Symbol.h>
-//#include <gtsam/slam/BetweenFactor.h>
-//#include <gtsam/nonlinear/GaussNewtonOptimizer.h>
-//#include <gtsam/nonlinear/Marginals.h>
+// We will use simple integer Keys to refer to the robot poses.
+#include <gtsam/inference/Key.h>
+// As in OdometryExample.cpp, we use a BetweenFactor to model odometry measurements.
+#include <gtsam/slam/BetweenFactor.h>
+// We add all facors to a Nonlinear Factor Graph, as our factors are nonlinear.
+#include <gtsam/nonlinear/NonlinearFactorGraph.h>
+// The nonlinear solvers within GTSAM are iterative solvers, meaning they linearize the
+// nonlinear functions around an initial linearization point, then solve the linear system
+// to update the linearization point. This happens repeatedly until the solver converges
+// to a consistent set of variable values. This requires us to specify an initial guess
+// for each variable, held in a Values container.
+#include <gtsam/nonlinear/Values.h>
+// Finally, once all of the factors have been added to our factor graph, we will want to
+// solve/optimize to graph to find the best (Maximum A Posteriori) set of variable values.
+// GTSAM includes several nonlinear optimizers to perform this step. Here we will use the
+// standard Levenberg-Marquardt solver
+#include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
+// Once the optimized values have been calculated, we can also calculate the marginal covariance
+// of desired variables
+#include <gtsam/nonlinear/Marginals.h>
+// Before we begin the example, we must create a custom unary factor to implement a
+// "GPS-like" functionality. Because standard GPS measurements provide information
+// only on the position, and not on the orientation, we cannot use a simple prior to
+// properly model this measurement.
+//
+// The factor will be a unary factor, affect only a single system variable. It will
+// also use a standard Gaussian noise model. Hence, we will derive our new factor from
+// the NoiseModelFactor1.
+#include <gtsam/nonlinear/NonlinearFactor.h>
+
 
 using namespace gtsam;
 
 namespace car
 {
+  class UnaryFactor: public NoiseModelFactor1<Pose2> {
+
+    // The factor will hold a measurement consisting of an (X,Y) location
+    // We could this with a Point2 but here we just use two doubles
+    double mx_, my_;
+
+  public:
+    /// shorthand for a smart pointer to a factor
+    typedef boost::shared_ptr<UnaryFactor> shared_ptr;
+
+    // The constructor requires the variable key, the (X, Y) measurement value, and the noise model
+    UnaryFactor(Key j, double x, double y, const SharedNoiseModel& model):
+      NoiseModelFactor1<Pose2>(model, j), mx_(x), my_(y) {}
+
+    virtual ~UnaryFactor() {}
+
+    // Using the NoiseModelFactor1 base class there are two functions that must be overridden.
+    // The first is the 'evaluateError' function. This function implements the desired measurement
+    // function, returning a vector of errors when evaluated at the provided variable value. It
+    // must also calculate the Jacobians for this measurement function, if requested.
+    Vector evaluateError(const Pose2& q, boost::optional<Matrix&> H = boost::none) const
+    {
+      // The measurement function for a GPS-like measurement is simple:
+      // error_x = pose.x - measurement.x
+      // error_y = pose.y - measurement.y
+      // Consequently, the Jacobians are:
+      // [ derror_x/dx  derror_x/dy  derror_x/dtheta ] = [1 0 0]
+      // [ derror_y/dx  derror_y/dy  derror_y/dtheta ] = [0 1 0]
+      if (H) (*H) = (Matrix(2,3) << 1.0,0.0,0.0, 0.0,1.0,0.0).finished();
+      return (Vector(2) << q.x() - mx_, q.y() - my_).finished();
+    }
+
+    // The second is a 'clone' function that allows the factor to be copied. Under most
+    // circumstances, the following code that employs the default copy constructor should
+    // work fine.
+    virtual gtsam::NonlinearFactor::shared_ptr clone() const {
+      return boost::static_pointer_cast<gtsam::NonlinearFactor>(
+          gtsam::NonlinearFactor::shared_ptr(new UnaryFactor(*this))); }
+
+    // Additionally, we encourage you the use of unit testing your custom factors,
+    // (as all GTSAM factors are), in which you would need an equals and print, to satisfy the
+    // GTSAM_CONCEPT_TESTABLE_INST(T) defined in Testable.h, but these are not needed below.
+
+  }; // UnaryFactor
+
   struct Pose2D
   {
     double x = 0.0;
@@ -45,8 +115,16 @@ namespace car
   // container
   Pose2D realPos;
   Pose2D curPos;
+  Pose2D inc;
   Pose2D odomPos;
   std::vector<Pose2D> lmMap;
+  uint k_time = 1;
+
+  // gtsam
+  NonlinearFactorGraph graph;
+  Values initialEstimate;
+  noiseModel::Diagonal::shared_ptr odometryNoise = noiseModel::Diagonal::Sigmas(Vector3(0.2, 0.2, 0.1));
+  noiseModel::Diagonal::shared_ptr unaryNoise = noiseModel::Diagonal::Sigmas(Vector2(0.1, 0.1)); // 10cm std on x,y
 
   // visualization
   ros::Publisher marker_pub;
@@ -64,12 +142,13 @@ namespace car
   void loadMap();
   void normalizeAngles(double& psi);
   void incrementOdometry(Odom odom_com, Pose2D &curPos, const bool &withNoise);
+  void incrementOdometry(Odom odom_com, Pose2D &Pos, const bool &withNoise);
   double sensorModel(const double &d);
 
   // loop functions
   void drive(const Odom &odom_com, Pose2D &curPos, Pose2D &realPos, Pose2D &odomPos);
   void sense(const Pose2D& pos, const std::vector<Pose2D> &lmMap, std::vector<Pose2D>& landmarks);
-  void localize(Pose2D &realPos, Pose2D &curPos,
+  void localize(const Pose2D &realPos, Pose2D &curPos,
                 const std::vector<Pose2D>& landmarks);
   void visualize(const Pose2D &realPos, const Pose2D &curPos, const std::vector<Pose2D> &landmarks);
 
@@ -107,8 +186,17 @@ namespace car
       psi -= 2 * M_PI;
   }
 
-  void incrementOdometry(Odom odom_com, Pose2D &Pos, const bool &withNoise)
+  void incrementOdometry(Odom odom_com, Pose2D &Pos, const bool &withNoise, Pose2D &increment)
   {
+    // compute increments
+    double d_t;
+    if(initialized && (odom_com.stamp - t_last) <= 1)
+      d_t = odom_com.stamp - t_last;
+    else
+      d_t = 0.1;
+    double angle = Pos.psi;
+
+    // add noise if necessary
     if (withNoise == true)
     {
       std::random_device rd;
@@ -117,14 +205,11 @@ namespace car
       std::normal_distribution<double> dy(0,odom_com.noise_y);
       std::normal_distribution<double> dpsi(0,odom_com.noise_psi); // maybe generate psi uniformly between 0 and 2pi
       odom_com.v_x += dx(gen); odom_com.v_y += dy(gen); odom_com.v_psi += dpsi(gen);
+      odometryNoise = noiseModel::Diagonal::Sigmas(Vector3(odom_com.noise_x*d_t,
+                                                           odom_com.noise_y*d_t, odom_com.noise_psi*d_t));
     }
+
     // compute increments
-    double d_t;
-    if(initialized && (odom_com.stamp - t_last) <= 1)
-      d_t = odom_com.stamp - t_last;
-    else
-      d_t = 0.1;
-    double angle = Pos.psi;
     double d_x =
         (d_t * (odom_com.v_x * std::cos(angle) - odom_com.v_y * std::sin(angle)));
     double d_y =
@@ -135,8 +220,16 @@ namespace car
     Pos.y += d_y;
     Pos.psi += d_psi;
     Pos.stamp = odom_com.stamp;
+    // save increments
+    increment.x = d_x; increment.y = d_y; increment.psi = d_psi;
     // normalize angles
     normalizeAngles(Pos.psi);
+  }
+
+  void incrementOdometry(Odom odom_com, Pose2D &Pos, const bool &withNoise)
+  {
+    Pose2D increment;
+    incrementOdometry(odom_com,Pos,withNoise,increment);
   }
 
   double sensorModel(const double &d)
@@ -149,14 +242,8 @@ namespace car
   {
     // TODO: add noise model before incrementing curPos
     incrementOdometry(odom_com, realPos, false);
-    incrementOdometry(odom_com, curPos, true);
+    incrementOdometry(odom_com, curPos, true, inc); // TODO: set curPos to last locPos
     odomPos = curPos;
-    std::cout << "realPos.x = " << realPos.x << ", realPos.y = " << realPos.y
-              << ", realPos.psi = " << realPos.psi << "\n";
-    std::cout << "curPos.x = " << curPos.x << ", curPos.y = " << curPos.y
-              << ", curPos.psi = " << curPos.psi << "\n";
-    std::cout << "odomPos.x = " << odomPos.x << ", odomPos.y = " << odomPos.y
-              << ", odomPos.psi = " << odomPos.psi << "\n";
   }
 
   void sense(const Pose2D& pos, const std::vector<Pose2D>& lmMap, std::vector<Pose2D>& landmarks)
@@ -188,9 +275,40 @@ namespace car
 //    }
   }
 
-  void localize(Pose2D& realPos, Pose2D& curPos,
+  void localize(const Pose2D& realPos, Pose2D& curPos,
                 const std::vector<Pose2D>& landmarks)
   {
+    // Create odometry (Between) factors between consecutive poses
+    graph.emplace_shared<BetweenFactor<Pose2> >(k_time, k_time+1, Pose2(inc.x, inc.y, inc.psi), odometryNoise);
+
+    // Add "GPS-like" measurements
+    // We will use our custom UnaryFactor for this.
+    graph.emplace_shared<UnaryFactor>(k_time+1, realPos.x, realPos.y, unaryNoise);
+    graph.print("\nFactor Graph:\n"); // print
+
+    // 3. Create the data structure to hold the initialEstimate estimate to the solution
+    // For illustrative purposes, these have been deliberately set to incorrect values
+    if (initialized == false)
+      initialEstimate.insert(k_time, Pose2(0, 0, 0));
+    initialEstimate.insert(k_time+1, Pose2(realPos.x, realPos.y, realPos.psi));
+    initialEstimate.print("\nInitial Estimate:\n"); // print
+
+    // 4. Optimize using Levenberg-Marquardt optimization. The optimizer
+    // accepts an optional set of configuration parameters, controlling
+    // things like convergence criteria, the type of linear system solver
+    // to use, and the amount of information displayed during optimization.
+    // Here we will use the default set of parameters.  See the
+    // documentation for the full set of parameters.
+    LevenbergMarquardtOptimizer optimizer(graph, initialEstimate);
+    Values result = optimizer.optimize();
+    result.print("Final Result:\n");
+
+    //curPos.x = result.at(result.size()-1);
+//    // 5. Calculate and print marginal covariances for all variables
+//    Marginals marginals(graph, result);
+//    std::cout << "x1 covariance:\n" << marginals.marginalCovariance(1) << std::endl;
+//    std::cout << "x2 covariance:\n" << marginals.marginalCovariance(2) << std::endl;
+//    std::cout << "x3 covariance:\n" << marginals.marginalCovariance(3) << std::endl;
   }
 
   void setupMarker()

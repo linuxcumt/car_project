@@ -186,12 +186,12 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-## Declare a C++ library
-add_library(car_lib
-  include/${PROJECT_NAME}/car_lib.h
-  src/car_lib.cpp
-#  /usr/lib/gtsam/gtsam.h
-)
+### Declare a C++ library
+#add_library(car_lib
+#  include/${PROJECT_NAME}/car_lib.h
+#  src/car_lib.cpp
+##  /usr/lib/gtsam/gtsam.h
+#)
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
@@ -271,10 +271,24 @@ add_library(car_lib
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
-add_executable(car_node src/car_node)
-target_link_libraries(car_node ${catkin_LIBRARIES})
+#add_executable(car_node src/car_node)
+#target_link_libraries(car_node ${catkin_LIBRARIES})
+#target_link_libraries(car_lib
+#  ${catkin_LIBRARIES}
+#)
+##target_link_libraries(car_lib ${GTSAM_INCLUDE_DIR})
+#target_link_libraries(car_lib gtsam)
+
+## Declare a C++ library
+add_library(car_lib src/car_lib.cpp)
 target_link_libraries(car_lib
+  gtsam
   ${catkin_LIBRARIES}
 )
-#target_link_libraries(car_lib ${GTSAM_INCLUDE_DIR})
-target_link_libraries(car_lib gtsam)
+
+add_executable(car_node src/car_node)
+target_link_libraries(car_node
+  car_lib
+  gtsam
+  ${catkin_LIBRARIES}
+)

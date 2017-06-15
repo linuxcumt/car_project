@@ -23,11 +23,19 @@ void odomCallback(const car::OdomVelocities &odom_msg)
     sense(realPos,lmMap,landmarks);
     // localize based on information found from landmarks
     localize(realPos,curPos,landmarks);
+    // print
+    std::cout << "realPos.x = " << realPos.x << ", realPos.y = " << realPos.y
+              << ", realPos.psi = " << realPos.psi << "\n";
+    std::cout << "curPos.x = " << curPos.x << ", curPos.y = " << curPos.y
+              << ", curPos.psi = " << curPos.psi << "\n";
+    std::cout << "odomPos.x = " << odomPos.x << ", odomPos.y = " << odomPos.y
+              << ", odomPos.psi = " << odomPos.psi << "\n";
     // visualize
     visualize(realPos,curPos,landmarks);
     // initialized
     initialized = true;
     t_last = odom_msg.header.stamp.toSec();
+    k_time++;
 }
 
 int main(int argc, char **argv)
