@@ -294,8 +294,10 @@ namespace car
         measPos.y += realPos.y + noise_xy(gen);
       }
       measPos.x/=landmarks.size(); measPos.y/=landmarks.size();
+      std::cout << "measPos.x = " << measPos.x << ", measPos.y = " << measPos.y << "\n";
       // Add "GPS-like" measurements
       // We will use our custom UnaryFactor for this.
+      // TODO: reduce unaryNoise when there are multiple landmarks
       graph.emplace_shared<UnaryFactor>(k_time+1, measPos.x, measPos.y, unaryNoise);
     }
 
@@ -318,7 +320,8 @@ namespace car
     Values result = optimizer.optimize();
     result.print("Final Result:\n");
 
-//    std::cout << "OMGOMGOGMGOG : " << result.at(result.size()-1) << "\n";
+   // Pose2 endres( (Pose2) result.at(k_time+1));
+   // std::cout << "OMGOMGOGMGOG : " << endres.x << "\n";
     //curPos.x = result.at(result.size()-1);
 //    // 5. Calculate and print marginal covariances for all variables
 //    Marginals marginals(graph, result);
