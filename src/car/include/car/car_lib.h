@@ -124,7 +124,7 @@ namespace car
   NonlinearFactorGraph graph;
   Values initialEstimate;
   noiseModel::Diagonal::shared_ptr odometryNoise = noiseModel::Diagonal::Sigmas(Vector3(0.2, 0.2, 0.1));
-  noiseModel::Diagonal::shared_ptr unaryNoise = noiseModel::Diagonal::Sigmas(Vector2(0.1, 0.1)); // 10cm std on x,y
+  noiseModel::Diagonal::shared_ptr unaryNoise = noiseModel::Diagonal::Sigmas(Vector2(0.2, 0.2)); // 10cm std on x,y
 
   // visualization
   ros::Publisher marker_pub;
@@ -281,16 +281,31 @@ namespace car
     // Create odometry (Between) factors between consecutive poses
     graph.emplace_shared<BetweenFactor<Pose2> >(k_time, k_time+1, Pose2(inc.x, inc.y, inc.psi), odometryNoise);
 
-    // Add "GPS-like" measurements
-    // We will use our custom UnaryFactor for this.
-    graph.emplace_shared<UnaryFactor>(k_time+1, realPos.x, realPos.y, unaryNoise);
+    if (landmarks.size() > 0)
+    {
+      Pose2D measPos;
+      std::random_device rd;
+      std::mt19937 gen(rd());
+      std::normal_distribution<double> noise_xy(0.0,0.2);
+      // for every lm calc the pos (optimally realPos) and add noise to simulate the noisy "gps-like" meas
+      for (uint i = 0; i<landmarks.size(); i++)
+      {
+        measPos.x += realPos.x + noise_xy(gen);
+        measPos.y += realPos.y + noise_xy(gen);
+      }
+      measPos.x/=landmarks.size(); measPos.y/=landmarks.size();
+      // Add "GPS-like" measurements
+      // We will use our custom UnaryFactor for this.
+      graph.emplace_shared<UnaryFactor>(k_time+1, measPos.x, measPos.y, unaryNoise);
+    }
+
     graph.print("\nFactor Graph:\n"); // print
 
     // 3. Create the data structure to hold the initialEstimate estimate to the solution
     // For illustrative purposes, these have been deliberately set to incorrect values
     if (initialized == false)
       initialEstimate.insert(k_time, Pose2(0, 0, 0));
-    initialEstimate.insert(k_time+1, Pose2(realPos.x, realPos.y, realPos.psi));
+    initialEstimate.insert(k_time+1, Pose2(curPos.x, curPos.y, curPos.psi));
     initialEstimate.print("\nInitial Estimate:\n"); // print
 
     // 4. Optimize using Levenberg-Marquardt optimization. The optimizer
@@ -303,6 +318,7 @@ namespace car
     Values result = optimizer.optimize();
     result.print("Final Result:\n");
 
+//    std::cout << "OMGOMGOGMGOG : " << result.at(result.size()-1) << "\n";
     //curPos.x = result.at(result.size()-1);
 //    // 5. Calculate and print marginal covariances for all variables
 //    Marginals marginals(graph, result);
