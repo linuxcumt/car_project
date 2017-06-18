@@ -18,6 +18,7 @@
 #include <gtsam/inference/Key.h>
 // As in OdometryExample.cpp, we use a BetweenFactor to model odometry measurements.
 #include <gtsam/slam/BetweenFactor.h>
+#include <gtsam/slam/PriorFactor.h>
 // We add all facors to a Nonlinear Factor Graph, as our factors are nonlinear.
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 // The nonlinear solvers within GTSAM are iterative solvers, meaning they linearize the

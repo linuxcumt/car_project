@@ -91,9 +91,8 @@ namespace car
   void drive(const Odom &odom_com, Pose2D &curPos, Pose2D &realPos, Pose2D &odomPos)
   {
     // TODO: add noise model before incrementing curPos
-    incrementOdometry(odom_com, realPos, false);
-    incrementOdometry(odom_com, curPos, true, inc); // TODO: set curPos to last locPos
-    odomPos = curPos;
+    incrementOdometry(odom_com, realPos, false, inc);
+    incrementOdometry(odom_com, odomPos, true); // TODO: set curPos to last locPos
   }
 
   void sense(const Pose2D& pos, const std::vector<Pose2D>& lmMap, std::vector<Pose2D>& landmarks)
@@ -130,7 +129,11 @@ namespace car
   {
     // add first pose
     if (initialized == false)
-      graph.emplace_shared<UnaryFactor>(k_time, 0, 0, unaryNoise);
+    {
+      Pose2 priorMean(0.0, 0.0, 0.0);
+      noiseModel::Diagonal::shared_ptr priorNoise = noiseModel::Diagonal::Sigmas(Vector3(0, 0, 0));
+      graph.emplace_shared<PriorFactor<Pose2> >(k_time, priorMean, priorNoise);
+    }
     // Create odometry (Between) factors between consecutive poses
     graph.emplace_shared<BetweenFactor<Pose2> >(k_time, k_time+1, Pose2(inc.x, inc.y, inc.psi), odometryNoise);
     // create GPS measurements
@@ -166,16 +169,16 @@ namespace car
 
 
     // remove first poses if graph too big
-    if(initialEstimate.size() > 3)
+    if(initialEstimate.size() > 100)
     {
       graph.erase(graph.begin(),graph.begin()+2);
       initialEstimate.erase(initialEstimate.begin()->key);
     }
 
-    std::cout << "k_time = " << k_time << "\n";
-    // print
-    graph.print("\nFactor Graph:\n");
-    initialEstimate.print("\nInitial Estimate:\n");
+//    std::cout << "k_time = " << k_time << "\n";
+//    // print
+//    graph.print("\nFactor Graph:\n");
+//    initialEstimate.print("\nInitial Estimate:\n");
 
     // 4. Optimize using Levenberg-Marquardt optimization. The optimizer
     // accepts an optional set of configuration parameters, controlling
@@ -186,6 +189,19 @@ namespace car
     LevenbergMarquardtOptimizer optimizer(graph, initialEstimate);
     Values result = optimizer.optimize();
     result.print("Final Result:\n");
+
+
+    Pose2 res = result.at<Pose2>(k_time+1);
+    curPos.x = res.x(); curPos.y = res.y(); curPos.psi = res.theta();
+//    for (Values::const_iterator it1 = result->begin(), it2 = other.begin();
+//            it1 != this->end(); ++it1, ++it2) {
+//          const Value& value1 = it1->value;
+//          const Value& value2 = it2->value;
+//          if (typeid(value1) != typeid(value2) || it1->key != it2->key
+//              || !value1.equals_(value2, tol)) {
+//            return false;
+//          }
+//        }
 
     //print(*(result.end()-1).value);
    // Pose2 endres( (Pose2) result.at(k_time+1));
