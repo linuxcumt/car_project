@@ -95,6 +95,31 @@ namespace car
 
   }; // UnaryFactor
 
+  class UnaryFactor3D: public NoiseModelFactor1<Pose2> {
+
+    double mx_, my_ , mtheta_;
+
+  public:
+    /// shorthand for a smart pointer to a factor
+    typedef boost::shared_ptr<UnaryFactor3D> shared_ptr;
+
+    UnaryFactor3D(Key j, double x, double y, double theta, const SharedNoiseModel& model):
+      NoiseModelFactor1<Pose2>(model, j), mx_(x), my_(y), mtheta_(theta) {}
+
+    virtual ~UnaryFactor3D() {}
+
+    Vector evaluateError(const Pose2& q, boost::optional<Matrix&> H = boost::none) const
+    {
+      if (H) (*H) = (Matrix(3,3) << 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0).finished();
+      return (Vector(3) << q.x() - mx_, q.y() - my_, q.theta() - mtheta_).finished();
+    }
+
+    virtual gtsam::NonlinearFactor::shared_ptr clone() const {
+      return boost::static_pointer_cast<gtsam::NonlinearFactor>(
+          gtsam::NonlinearFactor::shared_ptr(new UnaryFactor3D(*this))); }
+
+  }; // UnaryFactor3D
+
   struct Pose2D
   {
     double x = 0.0;
@@ -129,7 +154,9 @@ namespace car
   noiseModel::Diagonal::shared_ptr unaryNoise = noiseModel::Diagonal::Sigmas(Vector2(0.01, 0.01)); // 10cm std on x,y
   noiseModel::Diagonal::shared_ptr infiniteNoise = noiseModel::Diagonal::Sigmas(
         Vector2(std::numeric_limits<int>::max(), std::numeric_limits<int>::max())); //
-
+  noiseModel::Diagonal::shared_ptr unaryNoise3D = noiseModel::Diagonal::Sigmas(Vector3(0.01, 0.01, 0.01));
+  noiseModel::Diagonal::shared_ptr infiniteNoise3D = noiseModel::Diagonal::Sigmas(
+        Vector3(std::numeric_limits<int>::max(), std::numeric_limits<int>::max(), std::numeric_limits<int>::max())); //
 
   // visualization
   ros::Publisher marker_pub;

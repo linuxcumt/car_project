@@ -92,7 +92,8 @@ namespace car
   {
     // TODO: add noise model before incrementing curPos
     incrementOdometry(odom_com, realPos, false, inc);
-    incrementOdometry(odom_com, odomPos, true); // TODO: set curPos to last locPos
+    incrementOdometry(odom_com, odomPos, true);
+    incrementOdometry(odom_com, curPos, true);
   }
 
   void sense(const Pose2D& pos, const std::vector<Pose2D>& lmMap, std::vector<Pose2D>& landmarks)
@@ -143,6 +144,7 @@ namespace car
       std::random_device rd;
       std::mt19937 gen(rd());
       std::normal_distribution<double> noise_xy(0.0,0.01);
+      std::normal_distribution<double> noise_psi(0.0,0.0);
       // for every lm calc the pos (optimally realPos) and add noise to simulate the noisy "gps-like" meas
       for (uint i = 0; i<landmarks.size(); i++)
       {
@@ -150,16 +152,21 @@ namespace car
         measPos.y += realPos.y + noise_xy(gen);
       }
       measPos.x/=landmarks.size(); measPos.y/=landmarks.size();
-      std::cout << "measPos.x = " << measPos.x << ", measPos.y = " << measPos.y << "\n";
+      measPos.psi = realPos.psi + noise_psi(gen);
+      normalizeAngles(measPos.psi);
+      std::cout << "measPos.x = " << measPos.x << ", measPos.y = " << measPos.y
+                << ", measPos.psi = " << measPos.psi << "\n";
       // Add "GPS-like" measurements
       // We will use our custom UnaryFactor for this.
       // TODO: reduce unaryNoise when there are multiple landmarks
       graph.emplace_shared<UnaryFactor>(k_time+1, measPos.x, measPos.y, unaryNoise);
+      //graph.emplace_shared<UnaryFactor3D>(k_time+1, measPos.x, measPos.y, measPos.psi, unaryNoise3D);
     }
     else
     {
       //std::cout << "realPos.x = " << realPos.x << ", realPos.y = " << realPos.y << "\n";
       graph.emplace_shared<UnaryFactor>(k_time+1, realPos.x, realPos.y, infiniteNoise);
+      //graph.emplace_shared<UnaryFactor3D>(k_time+1, realPos.x, realPos.y, realPos.psi, infiniteNoise3D);
     }
     // 3. Create the data structure to hold the initialEstimate estimate to the solution
     // For illustrative purposes, these have been deliberately set to incorrect values
