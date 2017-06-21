@@ -50,6 +50,74 @@ using namespace gtsam;
 
 namespace car
 {
+  struct Pose2D
+  {
+    double x = 0.0;
+    double y = 0.0;
+    double psi = 0.0;
+    double stamp = 0.0;
+  };
+
+  struct Odom
+  {
+    double v_x = 0.0;
+    double v_y = 0.0;
+    double v_psi = 0.0;
+    double stamp = 0.0;
+    double noise_x = 0.0;
+    double noise_y = 0.0;
+    double noise_psi = 0.0;
+  };
+
+  // container
+  Pose2D realPos;
+  Pose2D curPos;
+  Pose2D inc;
+  Pose2D odomPos;
+  std::vector<Pose2D> lmMap;
+  uint k_time = 1;
+
+  // gtsam
+  NonlinearFactorGraph graph;
+  uint maxGraphSize = 3;
+  std::vector<int> numFactors;
+  Values initialEstimate;
+  noiseModel::Diagonal::shared_ptr odometryNoise = noiseModel::Diagonal::Sigmas(Vector3(0.1, 0.1, 0.01));
+  noiseModel::Diagonal::shared_ptr unaryNoise = noiseModel::Diagonal::Sigmas(Vector2(0.01, 0.01)); // 10cm std on x,y
+  noiseModel::Diagonal::shared_ptr infiniteNoise = noiseModel::Diagonal::Sigmas(
+        Vector2(std::numeric_limits<double>::max(), std::numeric_limits<double>::max())); //
+  noiseModel::Diagonal::shared_ptr unaryNoise3D = noiseModel::Diagonal::Sigmas(Vector3(0.01, 0.01, 0.001));
+  noiseModel::Diagonal::shared_ptr infiniteNoise3D = noiseModel::Diagonal::Sigmas(
+        Vector3(std::numeric_limits<double>::max(), std::numeric_limits<double>::max(), std::numeric_limits<double>::max())); //
+
+  // visualization
+  ros::Publisher marker_pub;
+  ros::Publisher rpath_pub, cpath_pub, opath_pub;
+  visualization_msgs::Marker points, line_strip, car, loc_lms, glob_lms;
+  nav_msgs::Path realPath, curPath, odomPath;
+  void setupMarker();
+
+  // flags
+  bool initialized = false;
+  double t_last = 0.0;
+  // variables
+
+  // utility functions
+  void loadMap();
+  void normalizeAngles(double& psi);
+  double getPsiDifference(const double &psi1, const double &psi2);
+  void incrementOdometry(Odom odom_com, Pose2D &curPos, const bool &withNoise);
+  void incrementOdometry(Odom odom_com, Pose2D &Pos, const bool &withNoise);
+  double sensorModel(const double &d);
+
+  // loop functions
+  void drive(const Odom &odom_com, Pose2D &curPos, Pose2D &realPos, Pose2D &odomPos);
+  void sense(const Pose2D& pos, const std::vector<Pose2D> &lmMap, std::vector<Pose2D>& landmarks);
+  void localize(const Pose2D &realPos, Pose2D &curPos,
+                const std::vector<Pose2D>& landmarks);
+  void visualize(const Pose2D &realPos, const Pose2D &curPos, const std::vector<Pose2D> &landmarks);
+
+  // gtsam implementation classes
   class UnaryFactor: public NoiseModelFactor1<Pose2> {
 
     // The factor will hold a measurement consisting of an (X,Y) location
@@ -111,7 +179,8 @@ namespace car
     Vector evaluateError(const Pose2& q, boost::optional<Matrix&> H = boost::none) const
     {
       if (H) (*H) = (Matrix(3,3) << 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0).finished();
-      return (Vector(3) << q.x() - mx_, q.y() - my_, q.theta() - mtheta_).finished();
+      double helper = getPsiDifference(q.theta(), mtheta_);
+      return (Vector(3) << q.x() - mx_, q.y() - my_, helper).finished();
     }
 
     virtual gtsam::NonlinearFactor::shared_ptr clone() const {
@@ -119,70 +188,6 @@ namespace car
           gtsam::NonlinearFactor::shared_ptr(new UnaryFactor3D(*this))); }
 
   }; // UnaryFactor3D
-
-  struct Pose2D
-  {
-    double x = 0.0;
-    double y = 0.0;
-    double psi = 0.0;
-    double stamp = 0.0;
-  };
-
-  struct Odom
-  {
-    double v_x = 0.0;
-    double v_y = 0.0;
-    double v_psi = 0.0;
-    double stamp = 0.0;
-    double noise_x = 0.0;
-    double noise_y = 0.0;
-    double noise_psi = 0.0;
-  };
-
-  // container
-  Pose2D realPos;
-  Pose2D curPos;
-  Pose2D inc;
-  Pose2D odomPos;
-  std::vector<Pose2D> lmMap;
-  uint k_time = 1;
-
-  // gtsam
-  NonlinearFactorGraph graph;
-  Values initialEstimate;
-  noiseModel::Diagonal::shared_ptr odometryNoise = noiseModel::Diagonal::Sigmas(Vector3(0.1, 0.1, 0.01));
-  noiseModel::Diagonal::shared_ptr unaryNoise = noiseModel::Diagonal::Sigmas(Vector2(0.01, 0.01)); // 10cm std on x,y
-  noiseModel::Diagonal::shared_ptr infiniteNoise = noiseModel::Diagonal::Sigmas(
-        Vector2(std::numeric_limits<int>::max(), std::numeric_limits<int>::max())); //
-  noiseModel::Diagonal::shared_ptr unaryNoise3D = noiseModel::Diagonal::Sigmas(Vector3(0.01, 0.01, 0.01));
-  noiseModel::Diagonal::shared_ptr infiniteNoise3D = noiseModel::Diagonal::Sigmas(
-        Vector3(std::numeric_limits<int>::max(), std::numeric_limits<int>::max(), std::numeric_limits<int>::max())); //
-
-  // visualization
-  ros::Publisher marker_pub;
-  ros::Publisher rpath_pub, cpath_pub, opath_pub;
-  visualization_msgs::Marker points, line_strip, car, loc_lms, glob_lms;
-  nav_msgs::Path realPath, curPath, odomPath;
-  void setupMarker();
-
-  // flags
-  bool initialized = false;
-  double t_last = 0.0;
-  // variables
-
-  // utility functions
-  void loadMap();
-  void normalizeAngles(double& psi);
-  void incrementOdometry(Odom odom_com, Pose2D &curPos, const bool &withNoise);
-  void incrementOdometry(Odom odom_com, Pose2D &Pos, const bool &withNoise);
-  double sensorModel(const double &d);
-
-  // loop functions
-  void drive(const Odom &odom_com, Pose2D &curPos, Pose2D &realPos, Pose2D &odomPos);
-  void sense(const Pose2D& pos, const std::vector<Pose2D> &lmMap, std::vector<Pose2D>& landmarks);
-  void localize(const Pose2D &realPos, Pose2D &curPos,
-                const std::vector<Pose2D>& landmarks);
-  void visualize(const Pose2D &realPos, const Pose2D &curPos, const std::vector<Pose2D> &landmarks);
 }
 
 #endif // CAR_LIB_H
