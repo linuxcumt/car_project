@@ -1,0 +1,2 @@
+set(controller_MESSAGE_FILES "/home/marc/catkin_ws/src/controller/msg/MapDense.msg;/home/marc/catkin_ws/src/controller/msg/Landmark.msg;/home/marc/catkin_ws/src/controller/msg/Landmarks.msg;/home/marc/catkin_ws/src/controller/msg/Pose2DWithCovarianceStamped.msg;/home/marc/catkin_ws/src/controller/msg/Grid.msg;/home/marc/catkin_ws/src/controller/msg/OdomVelocities.msg")
+set(controller_SERVICE_FILES "/home/marc/catkin_ws/src/controller/srv/GetLandmarks.srv")

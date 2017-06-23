@@ -1,0 +1,21 @@
+(cl:defpackage localization_msgs-msg
+  (:use )
+  (:export
+   "<GRID>"
+   "GRID"
+   "<LANDMARK>"
+   "LANDMARK"
+   "<LANDMARKS>"
+   "LANDMARKS"
+   "<MAPDENSE>"
+   "MAPDENSE"
+   "<MAPDENSENEW>"
+   "MAPDENSENEW"
+   "<ODOMVELOCITIES>"
+   "ODOMVELOCITIES"
+   "<POSE2DWITHCOVARIANCESTAMPED>"
+   "POSE2DWITHCOVARIANCESTAMPED"
+   "<TRANSFORMEDMAPDENSE>"
+   "TRANSFORMEDMAPDENSE"
+  ))
+

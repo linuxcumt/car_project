@@ -1,0 +1,2 @@
+car:controller
+-DCATKIN_DEVEL_PREFIX=/home/marc/catkin_ws/devel -DCMAKE_INSTALL_PREFIX=/home/marc/catkin_ws/install -G Unix Makefiles
