@@ -91,8 +91,7 @@ namespace car
 
   double sensorModel(const double &d)
   {
-    double std_dev = 100;
-    return std::exp(-std::pow(d/std_dev,2));
+    return std::exp(-std::pow(d/det_accuracy_sensor_std_dev,2));
   }
 
   void drive(const Odom &odom_com, Pose2D &curPos, Pose2D &realPos, Pose2D &odomPos)
@@ -104,7 +103,6 @@ namespace car
 
   void sense(const Pose2D& pos, const std::vector<Pose2D>& lmMap, std::vector<Pose2D>& landmarks)
   {
-    double d_thresh = 25;
     double d;
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -114,7 +112,7 @@ namespace car
     for (uint i = 0; i<lmMap.size(); i++)
     {
       d = std::sqrt(std::pow(lmMap.at(i).x-pos.x,2)+std::pow(lmMap.at(i).y-pos.y,2));
-      if (d<d_thresh)
+      if (d<d_landmark_thresh)
       {
         double prob = sensorModel(d); // probability to see current landmark
         double draw = drawer(gen);
@@ -139,38 +137,40 @@ namespace car
     if (initialized == false)
     {
       Pose2 priorMean(0.0, 0.0, 0.0);
-      noiseModel::Diagonal::shared_ptr priorNoise = noiseModel::Diagonal::Sigmas(Vector3(0, 0, 0));
       graph.emplace_shared<PriorFactor<Pose2> >(k_time, priorMean, priorNoise);
     }
     // Create odometry (Between) factors between consecutive poses
     graph.emplace_shared<BetweenFactor<Pose2> >(k_time, k_time+1, Pose2(inc.x, inc.y, inc.psi), odometryNoise);
-    // create GPS measurements
-    if (landmarks.size() > 0)
+    // create GPS measurements, over 3 landmarks allow for x,y,psi estimate through map matching (assumed)
+    if (landmarks.size() > 2)
     {
       Pose2D measPos;
       std::random_device rd;
       std::mt19937 gen(rd());
-      std::normal_distribution<double> noise_xy(0.0,0.01);
-      std::normal_distribution<double> noise_psi(0.0,0.0);
+      std::normal_distribution<double> noise_xy(0.0,measurementnoise_xy);
+      std::normal_distribution<double> noise_psi(0.0,measurementnoise_psi);
       measPos.x = realPos.x + noise_xy(gen);
       measPos.y = realPos.y + noise_xy(gen);
-      // for every lm calc the pos (optimally realPos) and add noise to simulate the noisy "gps-like" meas
-      for (uint i = 0; i<landmarks.size(); i++)
-      {
-        // Add "GPS-like" measurements
-        // We will use our custom UnaryFactor for this.
-        graph.emplace_shared<UnaryFactor>(k_time+1, measPos.x, measPos.y, unaryNoise);
-        counterFactors++;
-      }
-      //graph.emplace_shared<UnaryFactor3D>(k_time+1, measPos.x, measPos.y, measPos.psi, unaryNoise3D);
+      measPos.psi = realPos.psi + noise_psi(gen);
+      graph.emplace_shared<UnaryFactor3D>(k_time+1, measPos.x, measPos.y, measPos.psi, unaryNoise3D);
+      counterFactors++;
+//      // for every lm calc the pos (optimally realPos) and add noise to simulate the noisy "gps-like" meas
+//      for (uint i = 0; i<landmarks.size(); i++)
+//      {
+//        // Add "GPS-like" measurements
+//        // We will use our custom UnaryFactor for this.
+//        //graph.emplace_shared<UnaryFactor>(k_time+1, measPos.x, measPos.y, unaryNoise);
+//        graph.emplace_shared<UnaryFactor3D>(k_time+1, measPos.x, measPos.y, measPos.psi, unaryNoise3D);
+//        counterFactors++;
+//      }
     }
     else
     {
-      std::cout << "UNARY - realPos.x = " << realPos.x << ", realPos.y = " << realPos.y
-                << ", realPos.psi = " << realPos.psi << "\n";
-      graph.emplace_shared<UnaryFactor>(k_time+1, realPos.x, realPos.y, infiniteNoise);
-      counterFactors++;
-      //graph.emplace_shared<UnaryFactor3D>(k_time+1, realPos.x, realPos.y, realPos.psi, infiniteNoise3D);
+//      std::cout << "UNARY - realPos.x = " << realPos.x << ", realPos.y = " << realPos.y
+//                << ", realPos.psi = " << realPos.psi << "\n";
+//      //graph.emplace_shared<UnaryFactor>(k_time+1, realPos.x, realPos.y, infiniteNoise);
+//      graph.emplace_shared<UnaryFactor3D>(k_time+1, realPos.x, realPos.y, realPos.psi, infiniteNoise3D);
+//      counterFactors++;
     }
     // 3. Create the data structure to hold the initialEstimate estimate to the solution
     // For illustrative purposes, these have been deliberately set to incorrect values
@@ -178,7 +178,7 @@ namespace car
     {
       initialEstimate.insert(k_time, Pose2(0, 0, 0));
     }
-    initialEstimate.insert(k_time+1, Pose2(curPos.x, curPos.y, curPos.psi));
+    initialEstimate.insert(k_time+1, Pose2(realPos.x, realPos.y, realPos.psi));
 
 
     // remove first poses if graph too big
@@ -199,7 +199,7 @@ namespace car
 
     std::cout << "k_time = " << k_time << "\n";
     // print
-    graph.print("\nFactor Graph:\n");
+    //graph.print("\nFactor Graph:\n");
     //initialEstimate.print("\nInitial Estimate:\n");
 
     // 4. Optimize using Levenberg-Marquardt optimization. The optimizer
@@ -210,10 +210,13 @@ namespace car
     // documentation for the full set of parameters.
     LevenbergMarquardtOptimizer optimizer(graph, initialEstimate);
     Values result = optimizer.optimize();
-    result.print("Final Result:\n");
+    //result.print("Final Result:\n");
 
     Pose2 res = result.at<Pose2>(k_time+1);
-    curPos.x = res.x(); curPos.y = res.y(); curPos.psi = res.theta();
+    if(counterFactors > 0) // needed as optimizer somehow cant deal with theta values from Between Factor
+    {
+      curPos.x = res.x(); curPos.y = res.y(); curPos.psi = res.theta();
+    }
     numFactors.push_back(counterFactors);
 
 //    // 5. Calculate and print marginal covariances for all variables

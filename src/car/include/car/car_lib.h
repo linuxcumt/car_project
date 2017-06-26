@@ -79,14 +79,20 @@ namespace car
 
   // gtsam
   NonlinearFactorGraph graph;
-  uint maxGraphSize = 3;
+  uint maxGraphSize = 20;
   std::vector<int> numFactors;
   Values initialEstimate;
-  noiseModel::Diagonal::shared_ptr odometryNoise = noiseModel::Diagonal::Sigmas(Vector3(0.1, 0.1, 0.01));
-  noiseModel::Diagonal::shared_ptr unaryNoise = noiseModel::Diagonal::Sigmas(Vector2(0.01, 0.01)); // 10cm std on x,y
-  noiseModel::Diagonal::shared_ptr infiniteNoise = noiseModel::Diagonal::Sigmas(
-        Vector2(std::numeric_limits<double>::max(), std::numeric_limits<double>::max())); //
-  noiseModel::Diagonal::shared_ptr unaryNoise3D = noiseModel::Diagonal::Sigmas(Vector3(0.01, 0.01, 0.001));
+  double d_landmark_thresh = 30;
+  double det_accuracy_sensor_std_dev = 25;
+  double measurementnoise_xy = 0.01;
+  double measurementnoise_psi = 0.001;
+  noiseModel::Diagonal::shared_ptr priorNoise = noiseModel::Diagonal::Sigmas(Vector3(0, 0, 0));
+  noiseModel::Diagonal::shared_ptr odometryNoise = noiseModel::Diagonal::Sigmas(Vector3(0.2, 0.2, 0.01));
+  // -> only default, real value will be read from the controller
+//  noiseModel::Diagonal::shared_ptr unaryNoise = noiseModel::Diagonal::Sigmas(Vector2(0.03, 0.03));
+//  noiseModel::Diagonal::shared_ptr infiniteNoise = noiseModel::Diagonal::Sigmas(
+//        Vector2(std::numeric_limits<double>::max(), std::numeric_limits<double>::max()));
+  noiseModel::Diagonal::shared_ptr unaryNoise3D = noiseModel::Diagonal::Sigmas(Vector3(0.03, 0.03, 0.003));
   noiseModel::Diagonal::shared_ptr infiniteNoise3D = noiseModel::Diagonal::Sigmas(
         Vector3(std::numeric_limits<double>::max(), std::numeric_limits<double>::max(), std::numeric_limits<double>::max())); //
 
@@ -180,6 +186,9 @@ namespace car
     {
       if (H) (*H) = (Matrix(3,3) << 1.0,0.0,0.0, 0.0,1.0,0.0, 0.0,0.0,1.0).finished();
       double helper = getPsiDifference(q.theta(), mtheta_);
+     // std::cout << "helper = " << helper << "\n";
+//      std::cout << "q.x() = " << q.x() << ", q.y() = " << q.y() << ", q.theta() = " << q.theta() << "\n";
+//      std::cout << "mx_ = " << mx_ << ", my_ = " << my_ << ", mtheta_ = " << mtheta_ << "\n";
       return (Vector(3) << q.x() - mx_, q.y() - my_, helper).finished();
     }
 

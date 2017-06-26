@@ -51,7 +51,7 @@ int main(int argc, char **argv)
     cpath_pub = nh.advertise<nav_msgs::Path>("car_curpath", 10);
     opath_pub = nh.advertise<nav_msgs::Path>("car_odompath", 10);
 
-    // order is important! first map, then markers!
+    // order is important! first map, then markers, as the markers from the landmarks are created!
     loadMap();
     setupMarker();
 
