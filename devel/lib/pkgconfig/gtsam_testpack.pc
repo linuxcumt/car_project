@@ -1,8 +1,0 @@
-prefix=/home/marc/catkin_ws/devel
-
-Name: gtsam_testpack
-Description: Description of gtsam_testpack
-Version: 0.1.0
-Cflags: 
-Libs: -L/home/marc/catkin_ws/devel/lib 
-Requires: 
