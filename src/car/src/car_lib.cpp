@@ -4,6 +4,24 @@ using namespace std;
 
 namespace car
 {
+
+  void printPoses()
+  {
+    std::cout <<  "\033[32m" << "Ground Truth Pose: x = " << realPos.x << ", y = " << realPos.y
+              << ", psi = " << realPos.psi << "\n";
+    std::cout << "Localized Pose: x = " << curPos.x << ", y = " << curPos.y
+              << ", psi = " << curPos.psi << "\n";
+    std::cout << "Odometry Pose: x = " << odomPos.x << ", y = " << odomPos.y
+              << ", psi = " << odomPos.psi << "\n";
+
+    myfile.open(filename, std::fstream::in | std::fstream::out | std::fstream::app);
+    myfile << std::setprecision(precision) << realPos.x << "," << realPos.y << "," << realPos.psi
+              << "," << curPos.x << "," << curPos.y << "," << curPos.psi
+                 << "," << odomPos.x << "," << odomPos.y << "," << odomPos.psi;
+    myfile << "\n";
+    myfile.close();
+  }
+
   void loadMap()
   {
     std::fstream input("/home/marc/catkin_ws/data/lm_map.csv", std::ios::in);

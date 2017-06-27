@@ -106,9 +106,15 @@ namespace car
   // flags
   bool initialized = false;
   double t_last = 0.0;
+
   // variables
+  uint precision = 12;
+  bool printInfo = true;
+  std::ofstream myfile;
+  std::string filename = "/home/marc/catkin_ws/data/localization_infos.csv";
 
   // utility functions
+  void printPoses();
   void loadMap();
   void normalizeAngles(double& psi);
   double getPsiDifference(const double &psi1, const double &psi2);
