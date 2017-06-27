@@ -111,7 +111,7 @@ namespace car
   uint precision = 12;
   bool printInfo = true;
   std::ofstream myfile;
-  std::string filename = "/home/marc/catkin_ws/data/localization_infos.csv";
+  std::string filename = "/home/marc/catkin_ws/matlab/localization_infos.csv";
 
   // utility functions
   void printPoses();
