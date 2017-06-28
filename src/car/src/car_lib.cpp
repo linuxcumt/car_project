@@ -24,7 +24,7 @@ namespace car
 
   void loadMap()
   {
-    std::fstream input("/home/marc/catkin_ws/data/lm_map.csv", std::ios::in);
+    std::fstream input(filename_map, std::ios::in);
     std::string csvLine;
     Pose2D lm;
     // read every line from the stream

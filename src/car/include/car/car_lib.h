@@ -112,6 +112,7 @@ namespace car
   bool printInfo = true;
   std::ofstream myfile;
   std::string filename = "/home/marc/catkin_ws/matlab/localization_infos.csv";
+  std::string filename_map = "/home/marc/catkin_ws/data/lm_map.csv";
 
   // utility functions
   void printPoses();
