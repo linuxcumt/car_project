@@ -14,26 +14,20 @@ odomPos_psi = csvMat(:,9);
 n = length(realPos_x);
 t = (0:n-1) * 0.1;
 
-lw = 3;
-fs = 30;
-
-
 % plot error
 figure;
-plot(t,sqrt((realPos_x-curPos_x).^2 + (realPos_y-curPos_y).^2),'LineWidth',lw,'Color','blue');
+plot(t,sqrt((realPos_x-curPos_x).^2 + (realPos_y-curPos_y).^2),'LineWidth',2,'Color','blue');
 hold on;
-plot(t,sqrt((realPos_x-odomPos_x).^2 + (realPos_y-odomPos_y).^2),'LineWidth',lw,'Color','black');
-set(gca,'FontSize',fs);
-xlabel('Time [s]');
+plot(t,sqrt((realPos_x-odomPos_x).^2 + (realPos_y-odomPos_y).^2),'LineWidth',2,'Color','green');
+xlabel('Time [0.1s]');
 ylabel('Absolute Error [m]');
 legend('Localization error','Odometry error');
 
 % 
 figure;
-plot(t,getPsiDifference(realPos_psi,curPos_psi),'LineWidth',lw,'Color','blue');
+plot(t,realPos_psi-curPos_psi,'LineWidth',2,'Color','blue');
 hold on;
-plot(t,getPsiDifference(realPos_psi,odomPos_psi),'LineWidth',lw,'Color','black');
-set(gca,'FontSize',fs);
-xlabel('Time [s]');
+plot(t,sqrt((realPos_x-odomPos_x).^2 + (realPos_y-odomPos_y).^2),'LineWidth',2,'Color','green');
+xlabel('Time [0.1s]');
 ylabel('Absolute Error [rad]');
 legend('Localization error','Odometry error');
