@@ -5,7 +5,7 @@ using namespace std;
 namespace car
 {
 
-  void printPoses()
+  void printPoses(const Pose2D &realPos, const Pose2D &curPos, const Pose2D &odomPos, const std::vector<Pose2D> &landmarks )
   {
     std::cout <<  "\033[32m" << "Ground Truth Pose: x = " << realPos.x << ", y = " << realPos.y
               << ", psi = " << realPos.psi << "\n";
@@ -18,6 +18,32 @@ namespace car
     myfile << std::setprecision(precision) << realPos.x << "," << realPos.y << "," << realPos.psi
               << "," << curPos.x << "," << curPos.y << "," << curPos.psi
                  << "," << odomPos.x << "," << odomPos.y << "," << odomPos.psi;
+    myfile << "\n";
+    myfile.close();
+
+    myfile.open(filename_lm, std::fstream::in | std::fstream::out | std::fstream::app);
+    if (!initialized)
+    {
+      for (uint i = 0; i < lmMap.size(); i++)
+      {
+          myfile << std::setprecision(precision) << lmMap.at(i).x << ",";
+      }
+      myfile << "\n";
+      for (uint i = 0; i < lmMap.size(); i++)
+      {
+          myfile << std::setprecision(precision) << lmMap.at(i).y << ",";
+      }
+      myfile << "\n";
+    }
+    for (uint i = 0; i < landmarks.size(); i++)
+    {
+        myfile << std::setprecision(precision) << landmarks.at(i).x << ",";
+    }
+    myfile << "\n";
+    for (uint i = 0; i < landmarks.size(); i++)
+    {
+        myfile << std::setprecision(precision) << landmarks.at(i).y << ",";
+    }
     myfile << "\n";
     myfile.close();
   }

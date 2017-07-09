@@ -24,7 +24,7 @@ void odomCallback(const car::OdomVelocities &odom_msg)
     // localize based on information found from landmarks
     localize(realPos,curPos,landmarks);
     // print
-    if (printInfo) printPoses();
+    if (printInfo) printPoses(realPos,curPos,odomPos,landmarks);
     // visualize
     visualize(realPos,curPos,landmarks);
     // initialized
@@ -53,6 +53,7 @@ int main(int argc, char **argv)
     if (printInfo)
     {
         std::remove(filename.c_str());
+        std::remove(filename_lm.c_str());
     }
     //std::cout << lmMap.at(0).x << " " << lmMap.at(11).y << "\n";
     ros::spin();

@@ -82,7 +82,7 @@ namespace car
   uint maxGraphSize = 20;
   std::vector<int> numFactors;
   Values initialEstimate;
-  double d_landmark_thresh = 30;
+  double d_landmark_thresh = 20;
   double det_accuracy_sensor_std_dev = 25;
   double measurementnoise_xy = 0.01;
   double measurementnoise_psi = 0.001;
@@ -112,10 +112,11 @@ namespace car
   bool printInfo = true;
   std::ofstream myfile;
   std::string filename = "/home/marc/catkin_ws/matlab/localization_infos.csv";
+  std::string filename_lm = "/home/marc/catkin_ws/matlab/localization_lm.csv";
   std::string filename_map = "/home/marc/catkin_ws/data/lm_map.csv";
 
   // utility functions
-  void printPoses();
+  void printPoses(const Pose2D &realPos, const Pose2D &curPos, const Pose2D &odomPos, const std::vector<Pose2D> &landmarks );
   void loadMap();
   void normalizeAngles(double& psi);
   double getPsiDifference(const double &psi1, const double &psi2);
