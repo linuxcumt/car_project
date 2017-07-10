@@ -62,7 +62,7 @@ if (plotRoundabout)
     hold on;
     plot(realPos_x*scaling+offsetX,-realPos_y*scaling+offsetY,'LineWidth',lw,'Color','magenta');
     hold on;
-    for i=1:(min(100,n_iter)) 
+    for i=1:(min(200,n_iter)) 
         Xloc = csvMatLm(3+(i-1)*2,:);
         Yloc = csvMatLm(4+(i-1)*2,:);
         [Xloc,Yloc] = removeEmptyElements(Xloc,Yloc);
