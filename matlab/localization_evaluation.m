@@ -48,7 +48,8 @@ if (plotRoundabout)
     csvMatLm = csvread(filenameLm);
     MatImage = imread('roundabout.png');
     scaling = 11;
-    offsetX = 275; offsetY = 450;
+    offsetX = 285; offsetY = 450;
+    traLength = 10;
 
     n_iter = (size(csvMatLm,1)-2)/2;
     Xglob = csvMatLm(1,:);
@@ -71,12 +72,16 @@ if (plotRoundabout)
         hold on;
         realPoses = plot(realPos_x(i)*scaling+offsetX,-realPos_y(i)*scaling+offsetY,'+','LineWidth',lw,'MarkerEdgeColor','magenta');
         hold on;
+        curTraj = plot(curPos_x(max(1,i-traLength):i)*scaling+offsetX,-curPos_y(max(1,i-traLength):i)*scaling+offsetY,'LineWidth',lw,'Color','blue');
+        hold on;
         curPoses = plot(curPos_x(i)*scaling+offsetX,-curPos_y(i)*scaling+offsetY,'+','LineWidth',lw,'MarkerEdgeColor','blue');
+        hold on;
+        odomTraj = plot(odomPos_x(max(1,i-traLength):i)*scaling+offsetX,-odomPos_y(max(1,i-traLength):i)*scaling+offsetY,'LineWidth',lw,'Color','cyan');
         hold on;
         odomPoses = plot(odomPos_x(i)*scaling+offsetX,-odomPos_y(i)*scaling+offsetY,'+','LineWidth',lw,'MarkerEdgeColor','cyan');
         xlabel('x');
         ylabel('y');
-        legend('Global landmarks','Real trajectory','Sensed landmarks','Real pos.','Localized pos.','Odometry pos.');
+        legend('Global landmarks','Real trajectory','Sensed landmarks','Real pos.','Localized traj.','Localized pos.','Odometry traj.','Odometry pos.');
         % gif utilities
         drawnow;
         frame = getframe(1);
@@ -92,6 +97,7 @@ if (plotRoundabout)
         % pause and clear plot
         pause(0.000001);
         delete(Loclms); delete(realPoses); delete(curPoses); delete(odomPoses);
+        delete(curTraj); delete(odomTraj);
         %clf;
     end
 end
